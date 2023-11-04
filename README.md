@@ -41,7 +41,6 @@ Running this code will print, among other things, the following:
 [ Info: Constructed the linear system with 11 equations
 [ Info: Solving the system
 [ Info: The dimension of the right-kernel is 1.
-[ Info: Integrating infinitesimals
 ┌ Info: Found 1 infinitesimal generators:
 └ (1)   (0)∂/∂x1 + (-1)∂/∂p2 + (1)∂/∂p1
 [ Info: Integrating infinitesimal generator (1)
