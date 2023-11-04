@@ -111,7 +111,6 @@ function find_some_symmetries(ode)
     # We handle only some simple types of integrands η, and abort the
     # integration otherwise. As a solution, we obtain the sought group of
     # transformations x1*,...,xn*
-    @info "Integrating infinitesimals"
     symmetries = integrate_infinitesimals(ode, infinitesimal_generator, solutions)
 
     @info "Found $(length(symmetries)) symmetries"
