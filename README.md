@@ -6,25 +6,28 @@
 
 ## Installation
 
-In the Julia REPL, execute
+To install **StrikeGoldd**, execute this command in the Julia REPL
 
 ```julia
-import Pkg; Pkg.add(url="")
+import Pkg; Pkg.add(url="https://github.com/sumiya11/StrikeGoldd")
 ```
 
 ## Usage Example
 
-This package provides the function `find_some_symmetries`. It can be used like this:
+**StrikeGoldd** provides the function `find_some_symmetries`, which can be applied to polynomial ODE models. For example:
 
 ```julia
-ode = @ODEmodel(
-    ...
+using StrikeGoldd   # load the package
+
+ode = @ODEmodel(    # create the ODE
+    x1'(t) = x1(t) + p1 + p2,
+    y(t) = x1(t)
 )
 
 symmetries = find_some_symmetries(ode)
 ```
 
-This will print the following:
+Running the above will print, among other things, the following:
 
 ```julia
 
