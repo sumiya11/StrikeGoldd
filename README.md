@@ -1,6 +1,6 @@
 # StrikeGoldd
 
-**StrikeGoldd** is sandbox Julia package for analyzing structural identifiability of dynamical models described by ordinary differential equations (ODEs). 
+**StrikeGoldd** is a sandbox Julia package for analyzing structural identifiability of dynamical models described by ordinary differential equations (ODEs). 
 
 **StrikeGoldd** is (to an extent) a direct port of the MATBLAB package [STRIKE-GOLDD](https://github.com/afvillaverde/strike-goldd). The package [STRIKE-GOLDD](https://github.com/afvillaverde/strike-goldd) is licensed under the GNU GPL Version 3. 
 
