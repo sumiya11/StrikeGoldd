@@ -5,5 +5,6 @@ version = "0.0.1"
 
 [deps]
 AbstractAlgebra = "c3fe647b-3220-5bb0-a1ea-a7954cac585d"
+Combinatorics = "861a8166-3701-5b0c-9a16-15d98fcdc6aa"
 MacroTools = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
 Nemo = "2edaba10-b0f1-5616-af89-8c11ac63239a"

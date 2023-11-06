@@ -3,6 +3,7 @@ module StrikeGoldd
 using AbstractAlgebra
 using Nemo
 using MacroTools
+using Combinatorics
 
 include("utils.jl")
 include("ODE.jl")

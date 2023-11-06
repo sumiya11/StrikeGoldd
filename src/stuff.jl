@@ -1,6 +1,6 @@
 
 # Returns a map from variable xi to an infinitesimal ηi 
-function create_infinitesimal_generator(ode; degree=2)
+function create_infinitesimal_generator(ode; degree=4)
     ring = ode.poly_ring
     x_vars, parameters = ode.x_vars, ode.parameters
     all_variables = vcat(x_vars, parameters)
@@ -17,8 +17,11 @@ function create_infinitesimal_generator(ode; degree=2)
     [$(join(map(string, unknown_coeffs), ','))]."""
     # Maps xi to ηi
     infinitesimals = Dict()
-    for (i, variable) in enumerate(ode_vars)
-        infinitesimals[variable] = sum([unknown_coeffs[(i-1)*(degree+1)+j+1] * variable^j for j in 0:1:degree])
+    type = 1 # 1 to 3
+    if type == 1
+        for (i, variable) in enumerate(ode_vars)
+            infinitesimals[variable] = sum([unknown_coeffs[(i-1)*(degree+1)+j+1] * variable^j for j in 0:1:degree])
+        end
     end
     @debug """
     Inifinitesimals:
@@ -120,7 +123,7 @@ function integrate_infinitesimals(ode, infinitesimals, solutions)
         push!(infinitesimal_generators, inft)
     end
     symbs = map(i -> "∂/∂$(polyvars[i])", 1:n)
-    s = map(gen -> join(map(x -> "(" * string(x) * ")", gen) .* symbs, " + "), infinitesimal_generators)
+    s = map(gen -> join(map(x -> "(" * string(x[1]) * ")" * string(x[2]), filter(x -> !iszero(x[1]), collect(zip(gen, symbs)))), " + "), infinitesimal_generators)
     for i in 1:length(s)
         s[i] = "($i)\t" * s[i]
     end
@@ -129,6 +132,7 @@ function integrate_infinitesimals(ode, infinitesimals, solutions)
     $(join(s, "\n"))"""
     newring, newvars = PolynomialRing(base_ring(ring), vcat(map(string, polyvars), "ε"))
     newvars, epsilon = newvars[1:end-1], newvars[end]
+    # newring, epsilon = PowerSeriesRing(ring, 3, "ε")
     symmetries = []
     for (idx, gen) in enumerate(infinitesimal_generators)
         @info "Integrating infinitesimal generator ($(idx))"
@@ -138,34 +142,37 @@ function integrate_infinitesimals(ode, infinitesimals, solutions)
             # If the infinitesimal is zero, then there is no change
             if iszero(gen[i])
                 int = parent_ring_change(polyvars[i], newring)
+                # int = newring(polyvars[i])
                 transform[polyvars[i]] = int
                 continue
             end
             cfs = extract_coefficients(gen[i], [polyvars[i]])
-            # If more than 1 coefficient
-            if length(cfs) > 1
-                skip = true
-                @info "Cannot integrate generator ($idx): too large"
-                break
-            end
-            cf = first(values(cfs))
-            if degree(gen[i], polyvars[i]) == 0
-                @debug "Integrated ($idx), infinitesimal $i: translation"
-                int = parent_ring_change(polyvars[i], newring)
-                int = int + epsilon * parent_ring_change(cf, newring)
-                transform[polyvars[i]] = int
-            elseif degree(gen[i], polyvars[i]) == 1
-                # @debug "Integrated ($idx), infinitesimal $i: scaling"
-                # int = parent_ring_change(polyvars[i], newring)
-                # int = int * epsilon * parent_ring_change(cf, newring)
-                # transform[polyvars[i]] = int
-                @info "Cannot integrate ($idx): exponentiation is not supported :("
-                skip = true
-                break
-            else
-                skip = true
-                @info "Cannot integrate ($idx): too large"
-                break
+            transform[polyvars[i]] = zero(newring)
+            for (univmonom, cf) in cfs
+                if degree(gen[i], polyvars[i]) == 0
+                    @debug "Integrated ($idx), infinitesimal $i: translation"
+                    var_ = parent_ring_change(polyvars[i], newring)
+                    int = var_ + epsilon * parent_ring_change(cf, newring)
+                    # int = polyvars[i] + epsilon * parent_ring_change(cf, ring)
+                    transform[polyvars[i]] += int
+                elseif degree(gen[i], polyvars[i]) == 1
+                    @debug "Integrated ($idx), infinitesimal $i: scaling"
+                    var_ = parent_ring_change(polyvars[i], newring)
+                    int = var_ + var_ * epsilon * parent_ring_change(cf, newring)
+                    # int = polyvars[i] + polyvars[i] * epsilon * parent_ring_change(cf, ring)
+                    # int = polyvars[i] * exp(epsilon) * parent_ring_change(cf, ring)
+                    transform[polyvars[i]] += int
+                else
+                    # @debug "Integrated ($idx), infinitesimal $i: high-order"
+                    dd = degree(gen[i], polyvars[i])
+                    # # var_ = parent_ring_change(polyvars[i], newring)
+                    # # int = var_ + var_^dd * epsilon * parent_ring_change(cf, newring)
+                    # int = polyvars[i] + polyvars[i]^dd * epsilon * parent_ring_change(cf, ring)
+                    # transform[polyvars[i]] += int
+                    skip = true
+                    @info "Cannot integrate ($idx): too high order: $dd"
+                    break
+                end
             end
         end
         if skip
