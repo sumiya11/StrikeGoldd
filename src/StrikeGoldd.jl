@@ -218,6 +218,6 @@ function find_some_symmetries(ode; type=:univariate, degree=2)
 end
 
 export @ODEmodel
-export find_some_symmetries
+export find_some_symmetries, find_some_identifiable_functions
 
 end
