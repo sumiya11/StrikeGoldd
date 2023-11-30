@@ -1,26 +1,49 @@
 
+function get_all_monoms_up_to_total_degree(ring, v, d)
+    if d == 0 || length(v) == 0
+        return [one(ring)]
+    end
+    res = get_all_monoms_up_to_total_degree(ring, v, d - 1)
+    res_prev = copy(res)
+    for var in v
+        append!(res, res_prev .* var)
+    end
+    unique!(res)
+end
+
 # Returns a map from variable xi to an infinitesimal ηi 
-function create_infinitesimal_generator(ode; degree=4)
+function create_infinitesimal_generator(ode; degree=2, type=:univariate)
     ring = ode.poly_ring
     x_vars, parameters = ode.x_vars, ode.parameters
     all_variables = vcat(x_vars, parameters)
     n = length(all_variables)
-    new_vars = ["r$i$j" for i in 1:n for j in 0:degree]
+    new_vars = if type == :univariate
+        ["r$i$j" for i in 1:n for j in 0:degree]
+    else
+        all_monoms = get_all_monoms_up_to_total_degree(ring, all_variables, degree)
+        ["r$i$j" for i in 1:n for j in 1:length(all_monoms)]
+    end
     extended_ring, ext_vars = PolynomialRing(base_ring(ring), vcat(map(string, all_variables), new_vars, map(string, ode.u_vars)))
     ode_vars, unknown_coeffs = ext_vars[1:n], ext_vars[n+1:end-length(ode.u_vars)]
     @info """
     ODE has $(length(x_vars)) states and $(length(parameters)) parameters.
-    Creating univariate infinitesimals of degree $degree.
+    Creating $type infinitesimals of degree $degree.
     """
     @info """
     Introducing $(length(unknown_coeffs)) unknown coefficients:
     [$(join(map(string, unknown_coeffs), ','))]."""
     # Maps xi to ηi
     infinitesimals = Dict()
-    type = 1 # 1 to 3
-    if type == 1
+    if type == :univariate
         for (i, variable) in enumerate(ode_vars)
             infinitesimals[variable] = sum([unknown_coeffs[(i-1)*(degree+1)+j+1] * variable^j for j in 0:1:degree])
+        end
+    else
+        all_monoms = get_all_monoms_up_to_total_degree(ring, all_variables, degree)
+        all_monoms = map(m -> parent_ring_change(m, extended_ring), all_monoms)
+        count = length(all_monoms)
+        for (i, variable) in enumerate(ode_vars)
+            infinitesimals[variable] = sum([unknown_coeffs[(i-1)*(count)+j] * all_monoms[j] for j in 1:count])
         end
     end
     @debug """
@@ -80,8 +103,12 @@ function invariance_criterion_system(ode, infinitesimals, extension)
     return system
 end
 
-function solve_system(system)
+function solve_system(system, in_vars=nothing)
+    if in_vars === nothing
+        in_vars = gens(parent(system[1]))
+    end
     monoms = reduce(union, map(f -> collect(monomials(f)), system))
+    monoms = unique(append!(monoms, in_vars))
     sort!(monoms, rev=true)
     n = length(monoms)
     m = length(system)
@@ -94,7 +121,7 @@ function solve_system(system)
     Finding the kernel of
     $(join(map(x -> string(x), [system_nemo[i, :] for i in 1:m]), "\n"))"""
     kerdim, ker = kernel(system_nemo)
-    @info "The dimension of the right-kernel is $kerdim."
+    @debug "The dimension of the right-kernel is $kerdim."
     @debug "The kernel is\n$ker"
     solutions = [Dict(monoms .=> ker[:, i]) for i in 1:kerdim]
     @debug "System solutions are\n$solutions"
@@ -156,12 +183,16 @@ function integrate_infinitesimals(ode, infinitesimals, solutions)
                     # int = polyvars[i] + epsilon * parent_ring_change(cf, ring)
                     transform[polyvars[i]] += int
                 elseif degree(gen[i], polyvars[i]) == 1
-                    @debug "Integrated ($idx), infinitesimal $i: scaling"
-                    var_ = parent_ring_change(polyvars[i], newring)
-                    int = var_ + var_ * epsilon * parent_ring_change(cf, newring)
-                    # int = polyvars[i] + polyvars[i] * epsilon * parent_ring_change(cf, ring)
-                    # int = polyvars[i] * exp(epsilon) * parent_ring_change(cf, ring)
-                    transform[polyvars[i]] += int
+                    dd = degree(gen[i], polyvars[i])
+                    @info "Cannot integrate ($idx): too high order: $dd"
+                    skip = true
+                    break
+                    # @debug "Integrated ($idx), infinitesimal $i: scaling"
+                    # var_ = parent_ring_change(polyvars[i], newring)
+                    # int = var_ + var_ * epsilon * parent_ring_change(cf, newring)
+                    # # int = polyvars[i] + polyvars[i] * epsilon * parent_ring_change(cf, ring)
+                    # # int = polyvars[i] * exp(epsilon) * parent_ring_change(cf, ring)
+                    # transform[polyvars[i]] += int
                 else
                     # @debug "Integrated ($idx), infinitesimal $i: high-order"
                     dd = degree(gen[i], polyvars[i])
