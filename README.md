@@ -16,9 +16,9 @@ import Pkg; Pkg.add(url="https://github.com/sumiya11/StrikeGoldd")
 
 **StrikeGoldd** provides two functions: `find_some_identifiable_functions` and `find_some_symmetries`.
 
-### `find_some_identifiable_functions`
+#### `find_some_identifiable_functions`
 
-**StrikeGoldd** provides the function `find_some_symmetries`, which can be applied to polynomial ODE models. For example, you can run in Julia:
+**StrikeGoldd** provides the function `find_some_identifiable_functions`, which can be applied to polynomial ODE models to find some at least locally identifiable functions of parameters. For example, you can run in Julia:
 
 ```julia
 using StrikeGoldd     # load the package
@@ -65,7 +65,7 @@ Running this code will print:
  a*c
 ```
 
-### `find_some_symmetries`:
+#### `find_some_symmetries`:
 
 **StrikeGoldd** provides the function `find_some_symmetries`, which can be applied to polynomial ODE models. For example, you can run in Julia:
 
