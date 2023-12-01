@@ -60,7 +60,7 @@ end
 
 function generate_ansatz_polynomial(ode, ode_vars; degree=2)
     ring = ode.poly_ring
-    all_variables = ode_vars
+    all_variables = unique(vcat(ode.x_vars, ode_vars))
     n = length(all_variables)
     degree = 2
     new_vars = begin
@@ -80,8 +80,10 @@ function generate_ansatz_polynomial(ode, ode_vars; degree=2)
     # r2 = Any
 
     extended_ring, ext_vars = PolynomialRing(base_ring(ring), vcat(map(string, all_variables), new_vars))
-    ode_vars, unknown_coeffs = ext_vars[1:n], ext_vars[n+1:end]
+    delta = length(all_variables) - length(ode_vars)
+    ode_vars, unknown_coeffs = ext_vars[1+delta:n], ext_vars[n+1:end]
     all_monoms = get_all_monoms_up_to_total_degree(extended_ring, ode_vars, degree)
+    @info "" ode_vars unknown_coeffs
 
     @debug "" all_monoms
     all_monoms = map(m -> parent_ring_change(m, extended_ring), all_monoms)
@@ -131,7 +133,7 @@ function solve_linear_system(ode, ode_vars, derivatives, kernel_vectors, unknown
     system_eqs = map(s -> (@assert isone(denominator(s)); numerator(s)), system_eqs)
     @debug "" system_eqs
 
-    @info """
+    @debug """
     Constructed the following system in $unknown_coeffs:
     $(join(map(s -> "\t"*string(s) * " = 0", system_eqs), "\n"))"""
 
@@ -143,6 +145,7 @@ function solve_linear_system(ode, ode_vars, derivatives, kernel_vectors, unknown
         append!(system, s)
     end
 
+    # TODO: A bug here !!
     @info """
     Transformed into a linear system:
     $(join(map(s -> "\t"*string(s) * " = 0", system), "\n"))"""
@@ -151,7 +154,7 @@ function solve_linear_system(ode, ode_vars, derivatives, kernel_vectors, unknown
     kernel_dimension, solutions = solve_system(system, unknown_coeffs)
     @debug "" solutions
 
-    @info "There are $kernel_dimension independent solutions" solutions
+    @debug "There are $kernel_dimension independent solutions" solutions
 
     kernel_dimension, solutions
 end
@@ -177,6 +180,9 @@ function construct_identifiable_functions(ode, ode_vars, orig, solutions, unknow
             end
         end
         func = evaluate(orig, point)
+        if iszero(func)
+            continue
+        end
         push!(identifiable_functions, func)
     end
     identifiable_functions
